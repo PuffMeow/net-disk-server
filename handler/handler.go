@@ -64,7 +64,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	newFile.Seek(0, 0)
 	fileMeta.FileSha1 = util.FileSha1(newFile)
 
-	meta.UpdateFileMeta(fileMeta)
+	_ = meta.UpdateFileMetaDB(fileMeta)
 
 	data, err := json.Marshal(fileMeta)
 
@@ -83,7 +83,13 @@ func GetFileMetaHandler(w http.ResponseWriter, r *http.Request) {
 	if filehash == "" {
 		return
 	}
-	fileMeta := meta.GetFileMeta(filehash)
+
+	fileMeta, err := meta.GetFileMetaDB(filehash)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	data, err := json.Marshal(fileMeta)
 
 	if err != nil {

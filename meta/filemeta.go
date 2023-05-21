@@ -1,6 +1,7 @@
 package meta
 
 import (
+	"net-disk-server/db"
 	"sort"
 	"time"
 )
@@ -47,9 +48,31 @@ func UpdateFileMeta(fileMeta FileMeta) {
 	fileMetas[fileMeta.FileSha1] = fileMeta
 }
 
+// 新增/更新文件信息到 mysql 中
+func UpdateFileMetaDB(fileMeta FileMeta) bool {
+	return db.OnFileUploadFinished(fileMeta.FileSha1, fileMeta.FileName, fileMeta.FileSize, fileMeta.Location)
+}
+
 // 根据 sha1 获取文件元信息对象
 func GetFileMeta(fileSha1 string) FileMeta {
 	return fileMetas[fileSha1]
+}
+
+// 从 mysql 中获取文件元信息
+func GetFileMetaDB(fileSha1 string) (FileMeta, error) {
+	tableFile, err := db.GetFileMeta(fileSha1)
+	if err != nil {
+		return FileMeta{}, err
+	}
+
+	fileMeta := FileMeta{
+		FileSha1: tableFile.FileHash,
+		FileName: tableFile.FileName.String,
+		FileSize: tableFile.FileSize.Int64,
+		Location: tableFile.FileAddr.String,
+	}
+
+	return fileMeta, nil
 }
 
 // 获取批量元信息列表

@@ -14,7 +14,9 @@ func main() {
 	http.HandleFunc("/file/update", handler.UpdateFileMetaHandler)
 	http.HandleFunc("/file/delete", handler.DeleteFileHandler)
 
-	fmt.Printf("Start server in localhost:8080")
+	http.HandleFunc("/user/signup", handler.SignupHandler)
+
+	fmt.Printf("Start server in localhost:8080\n")
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
