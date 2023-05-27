@@ -1,6 +1,7 @@
 package meta
 
 import (
+	"fmt"
 	"net-disk-server/db"
 	"sort"
 	"time"
@@ -59,10 +60,11 @@ func GetFileMeta(fileSha1 string) FileMeta {
 }
 
 // 从 mysql 中获取文件元信息
-func GetFileMetaDB(fileSha1 string) (FileMeta, error) {
+func GetFileMetaDB(fileSha1 string) (*FileMeta, error) {
 	tableFile, err := db.GetFileMeta(fileSha1)
 	if err != nil {
-		return FileMeta{}, err
+		fmt.Println("GetFileMetaDB:", err.Error())
+		return nil, err
 	}
 
 	fileMeta := FileMeta{
@@ -72,7 +74,7 @@ func GetFileMetaDB(fileSha1 string) (FileMeta, error) {
 		Location: tableFile.FileAddr.String,
 	}
 
-	return fileMeta, nil
+	return &fileMeta, nil
 }
 
 // 获取批量元信息列表

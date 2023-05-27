@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net-disk-server/db"
 	"net-disk-server/meta"
 	"net-disk-server/util"
 	"net/http"
@@ -66,6 +67,16 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	_ = meta.UpdateFileMetaDB(fileMeta)
 
+	// todo: 更新用户文件表
+	r.ParseForm()
+	username := r.Form.Get("username")
+	isSuccess := db.OnUserFileUploadFinished(username, fileMeta.FileSha1, fileMeta.FileName, fileMeta.FileSize)
+
+	if !isSuccess {
+		w.Write([]byte("Upload failed"))
+		return
+	}
+
 	data, err := json.Marshal(fileMeta)
 
 	if err != nil {
@@ -111,8 +122,15 @@ func FileQueryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileMetas := meta.GetLastFileMetas(limitCnt)
-	data, err := json.Marshal(fileMetas)
+	username := r.Form.Get("username")
+	// fileMetas := meta.GetLastFileMetas(limitCnt)
+	userFiles, err := db.QueryUserFileMetas(username, limitCnt)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	data, err := json.Marshal(userFiles)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -189,4 +207,52 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
 	meta.RemoveFileMeta(fileSha1)
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, "Delete Success")
+}
+
+// 尝试秒传接口
+func TryFastUploadHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	// 解析请求参数
+	username := r.Form.Get("username")
+	filehash := r.Form.Get("fileahsh")
+	filename := r.Form.Get("filename")
+	filesize := r.Form.Get("filesize")
+
+	// 从文件列表查询相同 hash 的文件记录
+	fileMeta, err := meta.GetFileMetaDB(filehash)
+
+	// 查不到记录则返回秒传失败
+	if fileMeta == nil || err != nil {
+		resp := util.RespMsg{
+			Code: -1,
+			Msg:  "秒传失败，请访问普通上传接口",
+		}
+		w.Write(resp.JSONBytes())
+		return
+	}
+
+	convFilseSize, err := strconv.ParseInt(filesize, 10, 64)
+	if err != nil {
+		fmt.Println(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// 上传过则将文件信息写入用户文件表，返回成功
+	isSuccess := db.OnUserFileUploadFinished(username, filehash, filename, convFilseSize)
+	if !isSuccess {
+		resp := util.RespMsg{
+			Code: -2,
+			Msg:  "秒传失败，请稍后重试",
+		}
+		w.Write(resp.JSONBytes())
+		return
+	}
+
+	resp := util.RespMsg{
+		Code: 0,
+		Msg:  "秒传成功",
+	}
+	w.Write(resp.JSONBytes())
 }

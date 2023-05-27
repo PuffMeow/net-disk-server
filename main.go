@@ -13,8 +13,11 @@ func main() {
 	http.HandleFunc("/file/download", handler.DownloadHandler)
 	http.HandleFunc("/file/update", handler.UpdateFileMetaHandler)
 	http.HandleFunc("/file/delete", handler.DeleteFileHandler)
+	http.HandleFunc("/file/fastupload", handler.TryFastUploadHandler)
 
 	http.HandleFunc("/user/signup", handler.SignupHandler)
+	http.HandleFunc("/user/signin", handler.SignInHandler)
+	http.HandleFunc("/user/info", handler.HTTPInterceptor(handler.UserInfoHandler))
 
 	fmt.Printf("Start server in localhost:8080\n")
 
