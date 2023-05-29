@@ -16,7 +16,9 @@ var (
 // 创建 redis 连接池
 func newRedisPool() *redis.Pool {
 	return &redis.Pool{
-		MaxIdle:     50,
+		// 最大连接数
+		MaxIdle: 50,
+		// 在给定时间分配的最大连接数
 		MaxActive:   30,
 		IdleTimeout: 300 * time.Second,
 		Dial: func() (redis.Conn, error) {
@@ -48,7 +50,6 @@ func newRedisPool() *redis.Pool {
 
 func init() {
 	pool = newRedisPool()
-
 }
 
 func RedisPool() *redis.Pool {
